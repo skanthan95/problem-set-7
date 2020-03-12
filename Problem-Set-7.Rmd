@@ -7,6 +7,8 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 library(tidyverse)
+library(ggfortify)
+library(tsne)
 ```
 
 K-Means by hand
@@ -142,5 +144,42 @@ clusters_plot
 
 Our initial hunch of 3 clusters did pan out, as the mean distance between points and the cluster centroids is small relative to only using 2 clusters. This is also visually represented in the two plots, where the centroids and groups of data are more intuitively clustered together.
 
+#Application
 
+6. Perform PCA
+```{r}
+getwd()
+wiki <- read_csv("/Users/petecuppernull/Dropbox/UChicago/2019-20/Winter/Computatonal Modeling/Repos/Problem-Set-7-CM/data/wiki.csv")
+
+wiki_fit <- prcomp(wiki, 
+                  scale = TRUE)
+
+
+
+# visualize
+autoplot(wiki_fit,
+         shape = TRUE, # names instead of points
+         loadings.label = TRUE) + # show the loading directions
+theme_bw()
+
+```
+
+The variables that appear strongly correlated with the first component are exp4 (faculty who "contribute to Wikipedia") and faculty who work in engineering and architecture. The second principle component appears to capture direct oopinions aboout the use of Wikipedia for teaching: these avriables include bi1 and bi2 (recommending the use of Wikipedia to colleagues and students and intending to use Wikipedia for teaching in the future), as well as use3 and use4 (currently recommending to colleagues to use Wikipedia and knowing that thheir students currently use it).
+
+7. Calculate PVE 
+```{r}
+summary(wiki_fit)
+```
+Approximately 29.1% of the variance is expalined by the first two components.
+
+8. T-SNE
+```{r}
+wiki_scaled <- scale(wiki)
+
+tsne <- tsne(wiki_scaled, k = 2)
+
+plot(tsne)
+```
+
+Here, we see distinct clustering in the data. There appear to be four smaller, well-defined clusters, and one broad loosely correlated cluster. This would suggest that there are certain subsets of faculty which have distinct views on using Wikipedia in the classroom.
 
