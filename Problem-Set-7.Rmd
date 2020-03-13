@@ -5,20 +5,21 @@ date: "3/15/2020"
 output: pdf_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(ggfortify)
 library(tsne)
 library(clValid)
 ```
 
-K-Means by hand
-1. Initialize process, assign random cluster
+#K-Means by hand
+
+###1. Initialize process, assign random clusters
 ```{r}
+set.seed(10)
 input_1 <- c(5,8,7,8,3,4,2,3,4,5)
 input_2 <- c(8,6,5,4,3,2,2,8,9,8)
 
-plot(input_1, input_2)
 
 #create assignments
 label <- as.factor(sample(1:3, 10, replace=TRUE))
@@ -26,11 +27,14 @@ label <- as.factor(sample(1:3, 10, replace=TRUE))
 #assign labels to obs
 x <- cbind(input_1, input_2, label)
 
+ggplot(x, aes(input_1, input_2, color = as.factor(label))) +
+  geom_point()
 ```
 
-2. Write iterative function
-```{r}
-#create function to make DF, determine cluster centroids, attach centroids to original df and assign label based on closest centroid
+###2. Write iterative function for centroids and assignments
+```{r, message=FALSE}
+#create function to make DF, determine cluster centroids, 
+#attach centroids to original df and assign label based on closest centroid
 #return new dataframe, and then we can repeat this function until convergence
 iterate <- function(original_df){
   x_df <- as.data.frame(x)
@@ -55,21 +59,28 @@ colnames(points) <- c("x1", "x2", "x3", "y1", "y2", "y3")
 df_cluster <- as.data.frame(cbind(x_df, points))
   
 new_df <- df_cluster %>%
-  mutate(label = if_else((((abs(input_1-x1) + abs(input_2-y1)) / 2) < ((abs(input_1-x2) + abs(input_2-y2)) / 2)) & (((abs(input_1-x1) + abs(input_2-y1)) / 2) < ((abs(input_1-x3) + abs(input_2-y3)) / 2)), 1, 
-                           if_else((((abs(input_2-x2) + abs(input_2-y2)) / 2) < ((abs(input_1-x3) + abs(input_2-y3)) / 2)), 2, 3))) %>%
+  mutate(label = if_else((((abs(input_1-x1) + abs(input_2-y1)) / 2) < 
+                            ((abs(input_1-x2) + abs(input_2-y2)) / 2)) & 
+                           (((abs(input_1-x1) + abs(input_2-y1)) / 2) < 
+                              ((abs(input_1-x3) + abs(input_2-y3)) / 2)), 1, 
+                           if_else((((abs(input_2-x2) + abs(input_2-y2)) / 2) < 
+                                      ((abs(input_1-x3) + abs(input_2-y3)) / 2)), 2, 3))) %>%
   select(input_1, input_2, label)
 
 new_df
 }
 
 x2 <- iterate(x)
-x == x2
+x == x2 #not converged :(
 x3 <- iterate(x2)
-x2 == x3
+x2 == x3 #converged! :)
+
 ```
 
-3. Visualize cluster assignments
-```{r}
+
+
+###3. Visualize cluster assignments
+```{r, message=FALSE}
 final_centroids <- as.data.frame(x3) %>%
   group_by(label) %>%
   mutate(mean(input_1), mean(input_2)) %>%
@@ -77,7 +88,7 @@ final_centroids <- as.data.frame(x3) %>%
   distinct()
 
 clusters_plot <- ggplot() +
-  geom_point(data = as.data.frame(x2), 
+  geom_point(data = as.data.frame(x3), 
              mapping = aes(input_1, input_2, color = as.factor(label))) +
   geom_point(data = final_centroids, 
              mapping = aes(`mean(input_1)`, `mean(input_2)`, color = as.factor(label)), 
@@ -88,8 +99,8 @@ clusters_plot <- ggplot() +
 clusters_plot
 ```
 
-4. Repeat process for k = 2
-```{r}
+###4. Repeat process for k = 2
+```{r, message=FALSE}
 iterate2 <- function(original_df){
   x_df <- as.data.frame(x)
 
@@ -111,7 +122,8 @@ colnames(points) <- c("x1", "x2", "y1", "y2")
 df_cluster <- as.data.frame(cbind(x_df, points))
   
 new_df <- df_cluster %>%
-  mutate(label = if_else((((abs(input_1-x1) + abs(input_2-y1)) / 2) < ((abs(input_1-x2) + abs(input_2-y2)) / 2)), 1, 2)) %>%
+  mutate(label = if_else((((abs(input_1-x1) + abs(input_2-y1)) / 2) < 
+                            ((abs(input_1-x2) + abs(input_2-y2)) / 2)), 1, 2)) %>%
   select(input_1, input_2, label)
 
 new_df
@@ -137,19 +149,19 @@ ggplot() +
              alpha = .4) +
   labs(title = "Cluster Assignments - K = 2")
 
-clusters_plot
 
 ```
 
-5. Discussion
+###5. Discussion
 
-Our initial hunch of 3 clusters did pan out, as the mean distance between points and the cluster centroids is small relative to only using 2 clusters. This is also visually represented in the two plots, where the centroids and groups of data are more intuitively clustered together.
+Our initial hunch of 3 clusters did pan out, as the mean distance between points and the cluster centroids is small relative to only using 2 clusters. This is also visually represented in the two plots, where the centroids and groups of data are more intuitively clustered together in the k = 3 plot. **Note: while it appears as if the centroid for Label 1 is off center in the k = 3 plot, the reason for this is that data points 1 and 10 are in the exact same place, which is visually skewing the position of that cluster centroid.
 
 #Application
 
-6. Perform PCA
-```{r}
-getwd()
+##Dimension Reduction
+
+###6. Perform PCA
+```{r, message=FALSE}
 wiki <- read_csv("/Users/petecuppernull/Dropbox/UChicago/2019-20/Winter/Computatonal Modeling/Repos/Problem-Set-7-CM/data/wiki.csv")
 
 wiki_fit <- prcomp(wiki, 
@@ -165,27 +177,30 @@ theme_bw()
 
 ```
 
-The variables that appear strongly correlated with the first component are exp4 (faculty who "contribute to Wikipedia") and faculty who work in engineering and architecture. The second principle component appears to capture direct oopinions aboout the use of Wikipedia for teaching: these avriables include bi1 and bi2 (recommending the use of Wikipedia to colleagues and students and intending to use Wikipedia for teaching in the future), as well as use3 and use4 (currently recommending to colleagues to use Wikipedia and knowing that thheir students currently use it).
+The variables that appear strongly correlated with the first component are exp4 (faculty who "contribute to Wikipedia") and faculty who work in engineering and architecture. The second principle component appears to capture direct opinions about the use of Wikipedia for teaching: these variables include bi1 and bi2 (recommending the use of Wikipedia to colleagues and students and intending to use Wikipedia for teaching in the future, respectively), as well as use3 and use4 (currently recommending to colleagues to use Wikipedia and knowing that their students currently use it, respectively).
 
-7. Calculate PVE 
+###7. Calculate PVE 
 ```{r}
 summary(wiki_fit)
 ```
-Approximately 29.1% of the variance is expalined by the first two components.
+Approximately 29.2% of the variance is expalined by the first two components.
 
 8. T-SNE
-```{r}
+```{r, warning=FALSE, message=FALSE}
 wiki_scaled <- scale(wiki)
 
 tsne <- tsne(wiki_scaled, k = 2)
 
-plot(tsne)
+tsne %>%
+  ggplot(aes(`1`, `2`)) +
+  geom_point()
 ```
 
-Here, we see distinct clustering in the data. There appear to be four smaller, well-defined clusters, and one broad loosely correlated cluster. This would suggest that there are certain subsets of faculty which have distinct views on using Wikipedia in the classroom.
+Here, we see distinct clustering in the data. There appear to be five smaller, well-defined clusters, and one broad loosely correlated cluster. This would suggest that there are certain subsets of faculty which have distinct views on using Wikipedia in the classroom.
 
-9. K-Means
-Create Models
+##Clustering
+
+###9. Create K-Means Models
 ```{r}
 #2 clusters
 kmeans2 <- kmeans(wiki_scaled, 
@@ -237,24 +252,26 @@ autoplot(prcomp(as.data.frame(wiki_scaled)),
          )
 
 ```
-We can see that the k-means clustering creating results that spoke to similar variance in the data as did the PCA. In the plot using two clusters, k-means split the data nearly perfectly dow the center of the first principle component. The model with three clusters similarly shows very distinct classifications; the model with four clusters, however, begins to show more of a fuzzy boundary between the clusters, potentially suggesting that the optimal number of clusters for the most intuitive classification is three.
+We can see that the k-means clustering creating results that spoke to similar variance in the data as did the PCA. In the plot using two clusters, k-means split the data nearly perfectly down the center of the first principle component. The model with three clusters similarly shows very distinct classifications; the model with four clusters, however, begins to show more of a fuzzy boundary between the clusters, potentially suggesting that the optimal number of clusters for the most intuitive classification is two or three.
 
-10. Identify optimum number of clusters - silhouette width
-```{r}
-kmeans_valid <- clValid(as.matrix(wiki_scaled), 
-        nClust = 2:15, 
+### 10. Identify optimum number of clusters - silhouette width
+```{r, warning=FALSE, message=FALSE}
+#sample half of DF so doc will knit
+wiki_scaled_samp <- wiki_scaled[sample(nrow(wiki_scaled),size=400,replace=FALSE),]
+kmeans_valid <- clValid(as.matrix(wiki_scaled_samp), 
+        nClust = 2:8, 
         clMethods = "kmeans", 
         validation = "internal")
 
 km_df <- as.data.frame(measures(kmeans_valid))
 
-colnames(km_df) <- c("2", "3", "4", "5", "6", "7","8", "9", "10", "11", "12", "13", "14", "15")
+colnames(km_df) <- c("2", "3", "4", "5", "6", "7","8")
 
 km_final_df <- km_df %>%
   rownames_to_column() %>%
   gather(key = "clusters",
          value = "score",
-         2:15) %>%
+         2:8) %>%
   mutate(model = "kmeans") %>%
   mutate(clusters = as.numeric(clusters))
 
@@ -267,10 +284,10 @@ ggplot(aes(clusters, score)) +
        y = "Silhouette Width")
 ```
 
-The Silhouette Width validation shows that two clusters is the optimal number, as measured strictly by how well-matched the cluster is to its own data. This insight was also present in the visuals plots, which showed a strong distinction between the two classes.
+The Silhouette Width validation shows that two clusters is the optimal number, as measured strictly by how well-matched the cluster is to the within-cluster data. This insight was also present in the visuals plots, which showed a strong distinction between the two classes.
 
-11. Visualize optimal k-means (2 clusters)
-```{r}
+### 11. Visualize optimal k-means (2 clusters)
+```{r, message=FALSE, warning=FALSE}
 ##PCA
 autoplot(prcomp(as.data.frame(wiki_scaled)),
          data = wiki_kmeans2,
@@ -278,8 +295,6 @@ autoplot(prcomp(as.data.frame(wiki_scaled)),
          )
 
 ##t-SNE
-tsne <- tsne(wiki_scaled, k = 2)
-
 tsne %>%
   cbind(as.data.frame(kmeans2$cluster)) %>%
   rename(cluster = `kmeans2$cluster`) %>%
@@ -303,4 +318,4 @@ tsne %>%
   ggplot(aes(`1`, `2`, color = cluster)) +
   geom_point()
 ```
-Here, we still do not see any intuitive matching between the k-means cluster assignments and the t-SNE groupings, suggesting that t-SNE is capturing entirely different variation from both k-means and PCA. It would require further investigation to parse out the exact variation captured by t-SNE.
+Here, we still do not see any intuitive matching between the k-means cluster assignments and the t-SNE groupings, suggesting that t-SNE is capturing different variation from both k-means and PCA. It would require further investigation to parse out the exact variation captured by t-SNE.
