@@ -183,3 +183,60 @@ plot(tsne)
 
 Here, we see distinct clustering in the data. There appear to be four smaller, well-defined clusters, and one broad loosely correlated cluster. This would suggest that there are certain subsets of faculty which have distinct views on using Wikipedia in the classroom.
 
+9. K-Means
+Create Models
+```{r}
+#2 clusters
+kmeans2 <- kmeans(wiki_scaled, 
+                 centers = 2,
+                 nstart = 15)
+
+kmeans3 <- kmeans(wiki_scaled, 
+                 centers = 3,
+                 nstart = 15)
+
+kmeans4 <- kmeans(wiki_scaled, 
+                 centers = 4,
+                 nstart = 15)
+```
+
+Now map cluster assignments onto plots
+```{r}
+##Two Clusters
+wiki_kmeans2 <- wiki_scaled %>%
+  cbind(as.data.frame(kmeans2$cluster)) %>%
+  rename(cluster = `kmeans2$cluster`) %>%
+  mutate(cluster = as.factor(cluster))
+
+autoplot(prcomp(as.data.frame(wiki_scaled)),
+         data = wiki_kmeans2,
+         colour = 'cluster'
+         )
+
+##Three Clusters
+wiki_kmeans3 <- wiki_scaled %>%
+  cbind(as.data.frame(kmeans3$cluster)) %>%
+  rename(cluster = `kmeans3$cluster`) %>%
+  mutate(cluster = as.factor(cluster))
+
+autoplot(prcomp(as.data.frame(wiki_scaled)),
+         data = wiki_kmeans3,
+         colour = 'cluster'
+         )
+
+##Four Clusters
+wiki_kmeans4 <- wiki_scaled %>%
+  cbind(as.data.frame(kmeans4$cluster)) %>%
+  rename(cluster = `kmeans4$cluster`) %>%
+  mutate(cluster = as.factor(cluster))
+
+autoplot(prcomp(as.data.frame(wiki_scaled)),
+         data = wiki_kmeans4,
+         colour = 'cluster'
+         )
+
+```
+We can see that the k-means clustering creating results that spoke to similar variance in the data as did the PCA. In the plot using two clusters, k-means split the data nearly perfectly dow the center of the first principle component. The model with three clusters similarly shows very distinct classifications; the model with four clusters, however, begins to show more of a fuzzy boundary between the clusters, potentially suggesting that the optimal number of clusters for the most intuitive classification is three.
+
+
+
