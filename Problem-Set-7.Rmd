@@ -9,6 +9,7 @@ output: pdf_document
 library(tidyverse)
 library(ggfortify)
 library(tsne)
+library(clValid)
 ```
 
 K-Means by hand
@@ -238,5 +239,68 @@ autoplot(prcomp(as.data.frame(wiki_scaled)),
 ```
 We can see that the k-means clustering creating results that spoke to similar variance in the data as did the PCA. In the plot using two clusters, k-means split the data nearly perfectly dow the center of the first principle component. The model with three clusters similarly shows very distinct classifications; the model with four clusters, however, begins to show more of a fuzzy boundary between the clusters, potentially suggesting that the optimal number of clusters for the most intuitive classification is three.
 
+10. Identify optimum number of clusters - silhouette width
+```{r}
+kmeans_valid <- clValid(as.matrix(wiki_scaled), 
+        nClust = 2:15, 
+        clMethods = "kmeans", 
+        validation = "internal")
+
+km_df <- as.data.frame(measures(kmeans_valid))
+
+colnames(km_df) <- c("2", "3", "4", "5", "6", "7","8", "9", "10", "11", "12", "13", "14", "15")
+
+km_final_df <- km_df %>%
+  rownames_to_column() %>%
+  gather(key = "clusters",
+         value = "score",
+         2:15) %>%
+  mutate(model = "kmeans") %>%
+  mutate(clusters = as.numeric(clusters))
+
+km_final_df %>%
+  filter(rowname == "Silhouette") %>%
+ggplot(aes(clusters, score)) +
+  geom_line() +
+  labs(title = "Silhouette Width of Each Model",
+       x = "Number of Clusters",
+       y = "Silhouette Width")
+```
+
+The Silhouette Width validation shows that two clusters is the optimal number, as measured strictly by how well-matched the cluster is to its own data. This insight was also present in the visuals plots, which showed a strong distinction between the two classes.
+
+11. Visualize optimal k-means (2 clusters)
+```{r}
+##PCA
+autoplot(prcomp(as.data.frame(wiki_scaled)),
+         data = wiki_kmeans2,
+         colour = 'cluster'
+         )
+
+##t-SNE
+tsne <- tsne(wiki_scaled, k = 2)
+
+tsne %>%
+  cbind(as.data.frame(kmeans2$cluster)) %>%
+  rename(cluster = `kmeans2$cluster`) %>%
+  mutate(cluster = as.factor(cluster)) %>%
+  ggplot(aes(`1`, `2`, color = cluster)) +
+  geom_point()
 
 
+```
+
+There is a significant difference in interpretation between the PCA and t-SNE results. The PCA results appear to be mirroring the k-means clusters -- the observations in the PCA plot form a single cloud, and k-means clustering splits that cloud in half. With t-SNE however, there appears to be six distinct clouds, and so it is unsurprising that the k-means cluster assignments (for two clusters) appear to be mixed within the cluster assignments from t-SNE. As an additional exercise, below I plot the same t-SNE results with k-means for six clusters.
+```{r}
+kmeans6 <- kmeans(wiki_scaled, 
+                 centers = 6,
+                 nstart = 15)
+
+tsne %>%
+  cbind(as.data.frame(kmeans6$cluster)) %>%
+  rename(cluster = `kmeans6$cluster`) %>%
+  mutate(cluster = as.factor(cluster)) %>%
+  ggplot(aes(`1`, `2`, color = cluster)) +
+  geom_point()
+```
+Here, we still do not see any intuitive matching between the k-means cluster assignments and the t-SNE groupings, suggesting that t-SNE is capturing entirely different variation from both k-means and PCA. It would require further investigation to parse out the exact variation captured by t-SNE.
